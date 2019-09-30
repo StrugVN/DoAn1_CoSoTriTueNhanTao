@@ -289,6 +289,7 @@ start_pos = []
 end_pos = []
 polygon_set = []
 no_input = True
+cost = 0
 
 while run:
     wd = tk.Tk()
@@ -395,18 +396,21 @@ while run:
                     run_sim = False
         pg.display.update()
 
-    mess = tk.Tk()
-    mess.title('Completed')
-    mess.attributes("-topmost", True)
-    l_time = tk.Label(mess, text="Total cost: " + "{0:.3f}".format(cost))
-    l_time.config(font=("Time new Roman", 18))
-    l_time.pack()
+    if cost != 0:
+        mess = tk.Tk()
+        mess.title('Completed')
+        mess.attributes("-topmost", True)
+        l_time = tk.Label(mess, text="Total cost: " + "{0:.3f}".format(cost))
+        l_time.config(font=("Time new Roman", 18))
+        l_time.pack()
 
-    b_mess = tk.Button(mess, text="Close", command=mess.destroy)
-    b_mess.config(font=("Time new Roman", 14))
-    b_mess.pack()
+        b_mess = tk.Button(mess, text="Close", command=mess.destroy)
+        b_mess.config(font=("Time new Roman", 14))
+        b_mess.pack()
 
-    mess.mainloop()
+        mess.mainloop()
+
+        cost = 0
 
     no_input = True
     pg.quit()
