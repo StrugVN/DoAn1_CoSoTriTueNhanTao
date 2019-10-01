@@ -49,7 +49,20 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
     passed_node = []
     to_draw_p = []
 
+    while len(frontier) > 0:
+        curr_node = frontier[0]
+        curr_index = 0
 
+
+        for node in to_draw_p:
+            draw_cell(display, node.point, green)
+        to_draw_p.clear()
+
+        for node in to_draw_f:
+            draw_cell(display, node.point, steelblue)
+        to_draw_f.clear()
+
+        pg.display.update()
 
 
 def find_path_astar(display, start_posi, end_posi, max_x, max_y):
