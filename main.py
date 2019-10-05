@@ -110,7 +110,7 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
                 draw_cell(display, cell, lightblue)
             draw_cell(display, start_pos, blue)
             draw_cell(display, end_pos, red)
-            return curr_node.f
+            return curr_node.f, path[::-1]
 
         next_nodes = []
         for next in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
@@ -139,7 +139,7 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
 
             p_color = pg.Surface.get_at(display,
                                         (new_node[0] * scale + int(scale / 2), new_node[1] * scale + int(scale / 2)))
-            if p_color == purple or p_color == black or p_color == yellow or p_color == pink:
+            if p_color == purple or p_color == black or p_color == yellow or p_color == pink or p_color == coral or p_color == orange:
                 continue
 
             next_node = Node(new_node, curr_node)
@@ -178,44 +178,62 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
 
         pg.display.update()
 
-    return -1
+    return -1, []
 
 
 def find_path():
-    cloned_pickup = pickup_points.copy()
-    global sub_path
-    sub_path = [start_pos]
-    curr_point = start_pos
-    while len(cloned_pickup) > 0:
-        route_cost = []
+    if len(pickup_points) > 0:
+        cloned_pickup = pickup_points.copy()
+        final_path = []
+        final_cost = 0
+        global sub_path
+        sub_path = [start_pos]
+        curr_point = start_pos
+        while len(cloned_pickup) > 0:
+            route_costpath = []
+            clear_route(screen, int(1280 / scale), int(720 / scale))
+
+            for point in cloned_pickup:
+                sub_cost_path = find_path_astar(screen, curr_point, point, 1280 / scale, 720 / scale)
+                if sub_cost_path[0] == -1:
+                    return -1
+                route_costpath.append(sub_cost_path)
+
+            min_ind = 0
+            for i in range(0, len(route_costpath)):
+                if route_costpath[i][0] < route_costpath[min_ind][0]:
+                    min_ind = i
+
+            curr_point = cloned_pickup[min_ind]
+            cloned_pickup.pop(min_ind)
+            sub_path.append(curr_point)
+
+            final_path.append(route_costpath[min_ind][1])
+            final_cost += route_costpath[min_ind][0]
+
+            draw_cell(screen, curr_point, brown)
+
         clear_route(screen, int(1280 / scale), int(720 / scale))
-        #reset(screen)
-        for point in cloned_pickup:
-            sub_cost = find_path_astar(screen, curr_point, point, 1280 / scale, 720 / scale)
-            if sub_cost == -1:
-                return -1
-            route_cost.append(sub_cost)
 
-        min_ind = 0
-        for i in range(0, len(route_cost)):
-            if route_cost[i] < route_cost[min_ind]:
-                min_ind = i
+        sub_pathcost = find_path_astar(screen, sub_path[len(sub_path) - 1], end_pos, 1280 / scale, 720 / scale)
+        if sub_pathcost[0] == -1:
+            return -1
+        final_path.append(sub_pathcost[1])
+        final_cost += sub_pathcost[0]
+        sub_path.append(end_pos)
 
-        curr_point = cloned_pickup[min_ind]
-        cloned_pickup.pop(min_ind)
-        sub_path.append(curr_point)
-        draw_cell(screen, curr_point, brown)
+        clear_route(screen, int(1280 / scale), int(720 / scale))
 
-    clear_route(screen, int(1280 / scale), int(720 / scale))
-    #reset(screen)
-    f = 0
-    for i in range(0, len(sub_path) - 1):
-        f += find_path_astar(screen, sub_path[i], sub_path[i + 1], 1280 / scale, 720 / scale)
-    sub_cost = find_path_astar(screen, sub_path[len(sub_path) - 1], end_pos, 1280 / scale, 720 / scale)
-    if sub_cost == -1:
-        return -1
-    sub_path.append(end_pos)
-    return f + sub_cost
+        for _path in final_path:
+            for cell in _path:
+                pcolor = pg.Surface.get_at(screen, (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
+                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
+                    continue
+                draw_cell(screen, cell, lightblue)
+
+        return final_cost
+    else:
+        return find_path_astar(screen, start_pos, end_pos, int(1280 / scale), int(720 / scale))[0]
 
 
 # Draw + Coord functions
@@ -340,7 +358,6 @@ def load_pick_up(string):
     num_set = ([int(i) for i in str(string).split(',')])
     i = 0
     global pickup_points
-    pickup_points.clear()
     while i < len(num_set):
         pickup_points.append(flip_y((num_set[i], num_set[i + 1])))
         i += 2
@@ -383,22 +400,29 @@ def open_file():
     global run_sim
     run_sim = True
 
+    global no_input
+    no_input = False
+
     wd.destroy()
 
 
 def start_sim():
-    global start_pos
-    start_pos = [int(i) for i in str(e1.get()).split(',')]
-    global end_pos
-    end_pos = [int(i) for i in str(e2.get()).split(',')]
+    if e1.get():
+        global start_pos
+        start_pos = [int(i) for i in str(e1.get()).split(',')]
+    if e2.get():
+        global end_pos
+        end_pos = [int(i) for i in str(e2.get()).split(',')]
 
-    size = [int(i) for i in str(e3.get()).split(',')]
-    global scale
-    scale = min(int(1280 / size[0]), int(720 / size[1]))
-    global run_sim
-    run_sim = True
+    if e3.get():
+        size = [int(i) for i in str(e3.get()).split(',')]
+        global scale
+        scale = min(int(1280 / size[0]), int(720 / size[1]))
+        global run_sim
+        run_sim = True
 
-    load_pick_up(e4.get())
+    if e4.get():
+        load_pick_up(e4.get())
 
     wd.destroy()
 
@@ -414,6 +438,10 @@ def end_prog():
 pg.init()
 
 while run:
+    sub_path.clear()
+    pickup_points.clear()
+    polygon_set.clear()
+
     wd = tk.Tk()
     wd.title('Project 1 - Path finding')
     wd.attributes("-topmost", True)
@@ -520,9 +548,12 @@ while run:
         if cost == -1:
             text = "Cannot find path to target!"
         else:
-            path = [str(i) for i in sub_path]
-            s_cost = "{0:.3f}".format(cost)
-            text = "Path: %s\nTotal cost: %s" % (path, s_cost)
+            if len(sub_path) > 0:
+                path = [str(i) for i in sub_path]
+                s_cost = "{0:.3f}".format(cost)
+                text = "Path: %s\nTotal cost: %s" % (path, s_cost)
+            else:
+                text = "      Total cost: %s      " % ("{0:.3f}".format(cost))
 
         l_time = tk.Label(mess, text=text)
         l_time.config(font=("Time new Roman", 18))
