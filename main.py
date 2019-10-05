@@ -1,4 +1,4 @@
-import pygame as pg
+﻿import pygame as pg
 import tkinter as tk
 from tkinter import filedialog
 import random as rd
@@ -105,7 +105,7 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
                 node = node.back_node
             for cell in path:
                 pcolor = pg.Surface.get_at(display, (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
-                if pcolor == blue or pcolor == brown or pcolor == tan:
+                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
                     continue
                 draw_cell(display, cell, lightblue)
             draw_cell(display, start_pos, blue)
