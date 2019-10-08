@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 import random as rd
 import sys
+import queue
 
 scale = 1
 
@@ -44,15 +45,76 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
-    frontier = [start]
+    frontier = queue.Queue()
+    frontier.put(start)
     to_draw_f = []
     passed_node = []
     to_draw_p = []
 
-    while len(frontier) > 0:
-        curr_node = frontier[0]
-        curr_index = 0
+    while frontier.qsize() > 0:
+        curr_node = frontier.get()
+        passed_node.append(curr_node)
+        to_draw_p.append(curr_node)
 
+        if curr_node == end:
+            path = []
+            node = curr_node
+            while node is not None:
+                path.append(node.point)
+                node = node.back_node
+            for cell in path:
+                draw_cell(display, cell, lightblue)
+            draw_cell(display, start_pos, blue)
+            draw_cell(display, end_pos, red)
+            return curr_node.f
+
+        next_nodes = []
+        for next in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+            new_node = (curr_node.point[0] + next[0], curr_node.point[1] + next[1])
+            cross = False
+            if next[0] != 0 and next[1] != 0:
+                cross = True
+
+            if new_node[0] > max_x - 1 or new_node[0] < 0 or new_node[1] > max_y - 1 or new_node[1] < 0:
+                continue
+
+            if scale != 1 and is_out_of_bound(
+                    (new_node[0] * scale + int(scale / 5), new_node[1] * scale + int(scale / 5))):
+                continue
+
+            if cross:
+                x_color = pg.Surface.get_at(display, (
+                    new_node[0] * scale + int(scale / 2), curr_node.point[1] * scale + int(scale / 2)))
+                if x_color == purple or p_color == black or p_color == yellow or p_color == pink or p_color == coral or p_color == orange:
+                    continue
+                y_color = pg.Surface.get_at(display, (
+                    curr_node.point[0] * scale + int(scale / 2), new_node[1] * scale + int(scale / 2)))
+                if y_color == purple or p_color == black or p_color == yellow or p_color == pink or p_color == coral or p_color == orange:
+                    continue
+
+            p_color = pg.Surface.get_at(display,
+                                        (new_node[0] * scale + int(scale / 2), new_node[1] * scale + int(scale / 2)))
+            if p_color == purple or p_color == black or p_color == yellow or p_color == pink:
+                    continue
+
+            next_node = Node(new_node, curr_node)
+            next_nodes.append(next_node)
+
+        for node in next_nodes:
+            if node in passed_node:
+                continue
+
+            node.g = curr_node.g + 1
+            if cross:
+                node.g += 0.4
+            node.h = (node.point[0] - end.point[0]) ** 2 + (node.point[1] - end.point[1]) ** 2
+            node.f = node.g + node.h
+
+            if node in frontier.queue:
+                continue
+
+            frontier.put(node)
+            to_draw_f.append(node)
 
         for node in to_draw_p:
             draw_cell(display, node.point, green)
@@ -405,7 +467,8 @@ while run:
                         pg.draw.circle(screen, black, pg.mouse.get_pos(), 5)
             elif event.type == pg.KEYUP:
                 if event.key == pg.K_RETURN:
-                    cost = find_path_astar(screen, start_pos, end_pos, 1280 / scale, 720 / scale)
+                    #cost = find_path_astar(screen, start_pos, end_pos, 1280 / scale, 720 / scale)
+                    cost = breadth_first(screen, start_pos, end_pos, 1280 / scale, 720 / scale)
                     run_sim = False
         pg.display.update()
 
