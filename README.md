@@ -8,7 +8,7 @@
 *** Edit file "run.bat"
 - Them dong PAUSE de bat loi
 
-*** Quan tr?ng ***
-- Nh? pull r?i m?i s?a code
-- Ki?m tra pull r?i m?i s?a code
-- Commit code cu l�m x�a code m?i s? b? x�a b? ho�n to�n
+*** Quan trọng ***
+- Nhớ pull rồi mới sửa code
+- Kiểm tra pull rồi mới sửa code
+- Commit code cũ làm xóa code mới sẽ bị xóa bỏ hoàn toàn
