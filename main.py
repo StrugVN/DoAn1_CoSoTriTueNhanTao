@@ -438,6 +438,7 @@ def uniform_cost(display, start_posi, end_posi, max_x, max_y):
             return curr_node.f, path[::-1]
 
         next_nodes = []
+        node_cross = []
         for next in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
             new_node = (curr_node.point[0] + next[0], curr_node.point[1] + next[1])
             cross = False
@@ -469,14 +470,17 @@ def uniform_cost(display, start_posi, end_posi, max_x, max_y):
 
             next_node = Node(new_node, curr_node)
             next_nodes.append(next_node)
+            node_cross.append(cross)
 
+        index_in_next_node = 0
         for node in next_nodes:
+            node.f = curr_node.f + 1
+            if node_cross[index_in_next_node]:
+                node.f += 0.4
+            index_in_next_node = index_in_next_node + 1
+
             if node in passed_node:
                 continue
-
-            node.f = curr_node.f + 1
-            if cross:
-                node.f += 0.4
 
             if node in frontier:
                 continue
