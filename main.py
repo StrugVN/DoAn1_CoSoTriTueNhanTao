@@ -111,7 +111,7 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
 
             p_color = pg.Surface.get_at(display,
                                         (new_node[0] * scale + int(scale / 2), new_node[1] * scale + int(scale / 2)))
-            if p_color == purple or p_color == black or p_color == yellow or p_color == pink or p_color == coral or p_color == orange:
+            if p_color == purple or p_color == black or p_color == yellow or p_color == pink:
                     continue
 
             next_node = Node(new_node, curr_node)
@@ -209,7 +209,7 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
 
             p_color = pg.Surface.get_at(display,
                                         (new_node[0] * scale + int(scale / 2), new_node[1] * scale + int(scale / 2)))
-            if p_color == purple or p_color == black or p_color == yellow or p_color == pink or p_color == coral or p_color == orange:
+            if p_color == purple or p_color == black or p_color == yellow or p_color == pink:
                 continue
 
             next_node = Node(new_node, curr_node)
@@ -252,6 +252,7 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
     return -1, ()
 
 
+<<<<<<< HEAD
 def uniform_cost(display, start_posi, end_posi, max_x, max_y):
     start = Node(start_posi, None)
     end = Node(end_posi, None)
@@ -402,6 +403,8 @@ def find_path():
 
 
 
+=======
+>>>>>>> parent of 41c94f7... Hoàn thành Uniform_cost_search và sửa lỗi ghi đè lên hình
 def flip_y(point):
     return point[0], int(719 / scale) - point[1]
 
@@ -677,7 +680,12 @@ while run:
                         pg.draw.circle(screen, black, pg.mouse.get_pos(), 5)
             elif event.type == pg.KEYUP:
                 if event.key == pg.K_RETURN:
+<<<<<<< HEAD
                     cost = find_path()
+=======
+                    #cost = find_path_astar(screen, start_pos, end_pos, 1280 / scale, 720 / scale)
+                    cost = breadth_first(screen, start_pos, end_pos, 1280 / scale, 720 / scale)
+>>>>>>> parent of 41c94f7... Hoàn thành Uniform_cost_search và sửa lỗi ghi đè lên hình
                     run_sim = False
         pg.display.update()
     if cost != 0:
