@@ -2,6 +2,7 @@ import pygame as pg
 import tkinter as tk
 from tkinter import filedialog
 import random as rd
+import math
 import sys
 import queue
 
@@ -36,7 +37,6 @@ no_input = True
 cost = 0
 pickup_points = []
 sub_path = []
-chosen_alg = 0
 dir_set = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]
 
 
@@ -45,9 +45,9 @@ class Node:
         self.point = point
         self.back_node = back_node
 
-        self.f = 0
-        self.h = 0
-        self.g = 0
+        self.f = 0.0
+        self.h = 0.0
+        self.g = 0.0
 
     def __eq__(self, other):
         return self.point[0] == other.point[0] and self.point[1] == other.point[1]
@@ -83,6 +83,7 @@ def is_out_of_bound(point):
 
 
 def breadth_first(display, start_posi, end_posi, max_x, max_y):
+    print("Debug: Running Breadth-first")
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -144,15 +145,15 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
                     continue
 
             next_node = Node(new_node, curr_node)
+            if cross:
+                next_node.g = 0.4
             next_nodes.append(next_node)
 
         for node in next_nodes:
             if node in passed_node:
                 continue
 
-            node.g = curr_node.g + 1
-            if cross:
-                node.g += 0.4
+            node.g += curr_node.g + 1
             node.h = (node.point[0] - end.point[0]) ** 2 + (node.point[1] - end.point[1]) ** 2
             node.f = node.g + node.h
 
@@ -184,6 +185,7 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
 
 
 def best_first_search(display, start_posi, end_posi, max_x, max_y):
+    print("Debug: Running Best-first")
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -197,7 +199,7 @@ def best_first_search(display, start_posi, end_posi, max_x, max_y):
         curr_node = frontier[0]
         curr_index = 0
         for index, item in enumerate(frontier):
-            if item.h < curr_node.h:
+            if item.f < curr_node.f:
                 curr_node = item
                 curr_index = index
 
@@ -219,7 +221,7 @@ def best_first_search(display, start_posi, end_posi, max_x, max_y):
                 draw_cell(display, cell, lightblue)
             draw_cell(display, start_pos, blue)
             draw_cell(display, end_pos, red)
-            return curr_node.f, path[::-1]
+            return curr_node.f + curr_node.g, path[::-1]
 
         next_nodes = []
         for next in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
@@ -252,17 +254,17 @@ def best_first_search(display, start_posi, end_posi, max_x, max_y):
                 continue
 
             next_node = Node(new_node, curr_node)
+            if cross:
+                next_node.g = 0.4
             next_nodes.append(next_node)
 
         for node in next_nodes:
             if node in passed_node:
                 continue
 
-            node.g = curr_node.g + 1
-            if cross:
-                node.g += 0.4
-            node.h = (node.point[0] - end.point[0]) ** 2 + (node.point[1] - end.point[1]) ** 2
-            node.f = node.g + node.h
+            node.g += curr_node.g + 1
+            node.h = (node.point[0] - end.point[0])**2 + (node.point[1] - end.point[1])**2
+            node.f = node.h
 
             if node in frontier:
                 continue
@@ -292,6 +294,7 @@ def best_first_search(display, start_posi, end_posi, max_x, max_y):
 
 
 def find_path_astar(display, start_posi, end_posi, max_x, max_y):
+    print("Debug: Running A-star")
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -360,16 +363,17 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
                 continue
 
             next_node = Node(new_node, curr_node)
+            if cross:
+                next_node.g = 0.4
             next_nodes.append(next_node)
+
 
         for node in next_nodes:
             if node in passed_node:
                 continue
 
-            node.g = curr_node.g + 1
-            if cross:
-                node.g += 0.4
-            node.h = (node.point[0] - end.point[0]) ** 2 + (node.point[1] - end.point[1]) ** 2
+            node.g += curr_node.g + 1
+            node.h = math.sqrt((node.point[0] - end.point[0]) ** 2 + (node.point[1] - end.point[1]) ** 2)
             node.f = node.g + node.h
 
             if node in frontier:
@@ -400,6 +404,7 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
 
 
 def uniform_cost(display, start_posi, end_posi, max_x, max_y):
+    print("Debug: Running Uniform-cost")
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -510,14 +515,6 @@ def uniform_cost(display, start_posi, end_posi, max_x, max_y):
 
 
 def find_path():
-    search_alg = find_path_astar
-    if chosen_alg == 1:
-        search_alg = breadth_first
-    elif chosen_alg == 2:
-        search_alg = uniform_cost
-    elif chosen_alg == 3:
-        search_alg == best_first_search
-
     if len(pickup_points) > 0:
         cloned_pickup = pickup_points.copy()
         final_path = []
@@ -776,27 +773,30 @@ def end_prog():
     wd.destroy()
 
 
+search_alg = find_path_astar
+
+
 def choose_astar():
-    global chosen_alg
-    chosen_alg = 0
+    global search_alg
+    search_alg = find_path_astar
     wc.destroy()
 
 
 def choose_breadth_first():
-    global chosen_alg
-    chosen_alg = 1
+    global search_alg
+    search_alg = choose_breadth_first
     wc.destroy()
 
 
 def choose_uniform_cost():
-    global chosen_alg
-    chosen_alg = 2
+    global search_alg
+    search_alg = uniform_cost
     wc.destroy()
 
 
 def choose_best_first():
-    global chosen_alg
-    chosen_alg = 3
+    global search_alg
+    search_alg = best_first_search
     wc.destroy()
 
 # Program start here
