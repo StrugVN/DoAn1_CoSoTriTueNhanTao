@@ -7,3 +7,8 @@
 
 *** Edit file "run.bat"
 - Them dong PAUSE de bat loi
+
+*** Quan tr?ng ***
+- Nh? pull r?i m?i s?a code
+- Ki?m tra pull r?i m?i s?a code
+- Commit code cu làm xóa code m?i s? b? xóa b? hoàn toàn
