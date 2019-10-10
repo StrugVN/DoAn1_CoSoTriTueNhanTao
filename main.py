@@ -33,6 +33,7 @@ start_pos = []
 end_pos = []
 polygon_set = []
 moving_po_set = []
+id_num = 0
 no_input = True
 cost = 0
 pickup_points = []
@@ -53,29 +54,84 @@ class Node:
         return self.point[0] == other.point[0] and self.point[1] == other.point[1]
 
 
+class Moving_Point:
+    def __init__(self, point, goal):
+        self.point = point
+        self.goal = goal
+        self.path = best_first_search(screen, self.point, self.goal, 1280/scale, 720/scale, True)[1]
+        self.cost = 0
+
+    def arrived(self):
+        return self.point == self.goal
+
+    def clear_self(self):
+        draw_cell(screen, self.point, white)
+
+    def draw_self(self):
+        draw_cell(screen, self.point, blue)
+
+    def move_to_next(self):
+        if self.arrived():
+            return
+        pcolor = pg.Surface.get_at(screen, (self.path[0][0] * scale + int(scale / 2), self.path[0][1] * scale + int(scale / 2)))
+        if len(self.path) == 0 or (pcolor != white and pcolor != red):
+            self.path = best_first_search(screen, self.point, self.goal, 1280 / scale, 720 / scale, True)[1]
+
+        if len(self.path) > 0:
+            self.clear_self()
+            if self.point[0] - self.path[0][0] == 0 or self.point[1] - self.path[0][1] == 0:
+                self.cost += 1
+            else:
+                self.cost += 1.4
+            self.point = self.path[0]
+            self.path.pop(0)
+            self.draw_self()
+
+
+
 class Moving_Polygon:
-    def __init__(self, points=None, dir=None, color=None):
+    def __init__(self, points=None, dir=None, color=None, id=None):
         self.points = points
         self.dir = dir
         self.color = color
+        self.id = id
 
-    def move_to_next(self):
-        new_pos = self.points.copy()
-        for point in new_pos:
-            point = (point[0] + self.dir[0], point[1] + self.dir[1])
-        for point in new_pos:
-            pcolor = pg.Surface.get_at(screen,
-                                       (point[0] * scale + int(scale / 2), point[1] * scale + int(scale / 2)))
-            if pcolor != white:
-                self.dir = self.dir[0] * -1, self.dir[1] * -1
-                return False
-        self.points = new_pos
-        return True
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def clear_self(self):
+        for point in self.points:
+            draw_cell(screen, point, white)
+        pg.display.update()
 
     def draw_self(self):
         for point in self.points:
             draw_cell(screen, point, self.color)
         pg.display.update()
+
+    def move_to_next(self, others, moving_point, goal):
+        new_pos = []
+        for point in self.points:
+            new_pos.append((point[0] + self.dir[0], point[1] + self.dir[1]))
+        for point in new_pos:
+            if point[0] < 0 or point[1] < 0 or point[0] >= int(1280/scale) or point[1] >= int(720/scale) or point == goal:
+                self.dir = dir_set[rd.randint(0, 7)]
+                return False
+            if point == moving_point.point:
+                self.dir = dir_set[rd.randint(0, 7)]
+                return False
+            for polygon in others:
+                if polygon == self:
+                    continue
+                if point in polygon.points:
+                    self.dir = dir_set[rd.randint(0, 7)]
+                    return False
+
+        self.clear_self()
+        self.points = new_pos
+        self.draw_self()
+        pg.display.update()
+        return True
 
 
 def is_out_of_bound(point):
@@ -83,7 +139,6 @@ def is_out_of_bound(point):
 
 
 def breadth_first(display, start_posi, end_posi, max_x, max_y):
-    print("Debug: Running Breadth-first")
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -184,8 +239,7 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
     return -1, ()
 
 
-def best_first_search(display, start_posi, end_posi, max_x, max_y):
-    print("Debug: Running Best-first")
+def best_first_search(display, start_posi, end_posi, max_x, max_y, dont_draw=False):
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -213,14 +267,15 @@ def best_first_search(display, start_posi, end_posi, max_x, max_y):
             while node is not None:
                 path.append(node.point)
                 node = node.back_node
-            for cell in path:
-                pcolor = pg.Surface.get_at(display,
-                                           (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
-                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
-                    continue
-                draw_cell(display, cell, lightblue)
-            draw_cell(display, start_pos, blue)
-            draw_cell(display, end_pos, red)
+            if not dont_draw:
+                for cell in path:
+                    pcolor = pg.Surface.get_at(display,
+                                               (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
+                    if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
+                        continue
+                    draw_cell(display, cell, lightblue)
+                draw_cell(display, start_pos, blue)
+                draw_cell(display, end_pos, red)
             return curr_node.f + curr_node.g, path[::-1]
 
         next_nodes = []
@@ -272,20 +327,22 @@ def best_first_search(display, start_posi, end_posi, max_x, max_y):
             frontier.append(node)
             to_draw_f.append(node)
 
-        for node in to_draw_p:
-            pcolor = pg.Surface.get_at(display,
-                                       (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
-            if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
-                continue
-            draw_cell(display, node.point, green)
-        to_draw_p.clear()
+        if not dont_draw:
+            for node in to_draw_p:
+                pcolor = pg.Surface.get_at(display,
+                                           (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
+                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
+                    continue
+                draw_cell(display, node.point, green)
 
-        for node in to_draw_f:
-            pcolor = pg.Surface.get_at(display,
-                                       (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
-            if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
-                continue
-            draw_cell(display, node.point, steelblue)
+            for node in to_draw_f:
+                pcolor = pg.Surface.get_at(display,
+                                           (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
+                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
+                    continue
+                draw_cell(display, node.point, steelblue)
+
+        to_draw_p.clear()
         to_draw_f.clear()
 
         pg.display.update()
@@ -293,8 +350,7 @@ def best_first_search(display, start_posi, end_posi, max_x, max_y):
     return -1, ()
 
 
-def find_path_astar(display, start_posi, end_posi, max_x, max_y):
-    print("Debug: Running A-star")
+def find_path_astar(display, start_posi, end_posi, max_x, max_y, dont_draw=False):
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -322,14 +378,15 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
             while node is not None:
                 path.append(node.point)
                 node = node.back_node
-            for cell in path:
-                pcolor = pg.Surface.get_at(display,
-                                           (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
-                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
-                    continue
-                draw_cell(display, cell, lightblue)
-            draw_cell(display, start_pos, blue)
-            draw_cell(display, end_pos, red)
+            if not dont_draw:
+                for cell in path:
+                    pcolor = pg.Surface.get_at(display,
+                                               (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
+                    if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
+                        continue
+                    draw_cell(display, cell, lightblue)
+                draw_cell(display, start_pos, blue)
+                draw_cell(display, end_pos, red)
             return curr_node.f, path[::-1]
 
         next_nodes = []
@@ -382,20 +439,22 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
             frontier.append(node)
             to_draw_f.append(node)
 
-        for node in to_draw_p:
-            pcolor = pg.Surface.get_at(display,
-                                       (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
-            if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
-                continue
-            draw_cell(display, node.point, green)
-        to_draw_p.clear()
+        if not dont_draw:
+            for node in to_draw_p:
+                pcolor = pg.Surface.get_at(display,
+                                           (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
+                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
+                    continue
+                draw_cell(display, node.point, green)
 
-        for node in to_draw_f:
-            pcolor = pg.Surface.get_at(display,
-                                       (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
-            if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
-                continue
-            draw_cell(display, node.point, steelblue)
+            for node in to_draw_f:
+                pcolor = pg.Surface.get_at(display,
+                                           (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
+                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
+                    continue
+                draw_cell(display, node.point, steelblue)
+
+        to_draw_p.clear()
         to_draw_f.clear()
 
         pg.display.update()
@@ -404,7 +463,6 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y):
 
 
 def uniform_cost(display, start_posi, end_posi, max_x, max_y):
-    print("Debug: Running Uniform-cost")
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -569,12 +627,68 @@ def find_path():
 
 
 def find_path_moving():
-    curr = start_pos
-    while curr != end_pos:
+    print("Sim moving obj")
+    print(len(moving_po_set))
+    curr = Moving_Point(start_pos, end_pos)
+    while not curr.arrived():
+        pg.time.wait(200)
         pg.event.pump()
+        curr.move_to_next()
         for polygon in moving_po_set:
-            if polygon.move_to_next():
-                polygon.draw()
+            polygon.move_to_next(moving_po_set, curr, end_pos)
+    return curr.cost
+
+
+def add_moving_polygon(x, y, pcolor):
+    print("Adding polygon, start: ", end="")
+    print(x, end=",")
+    print(y)
+    frontier = [(x, y)]
+    points = []
+
+    while len(frontier) > 0:
+        pg.event.pump()
+        curr = frontier[0]
+        points.append(curr)
+        draw_cell(screen, curr, gray)
+        pg.display.update()
+        frontier.pop(0)
+
+        for next in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+            next_point = curr[0] + next[0], curr[1] + next[1]
+            if next_point[0] < 0 or next_point[1] < 0 or next_point[0] >= int(1280/scale) or next_point[1] >= int(720/scale):
+                continue
+            if next_point in points:
+                continue
+            if next_point in frontier:
+                continue
+            next_color = pg.Surface.get_at(screen, (next_point[0] * scale + int(scale / 2), next_point[1] * scale + int(scale / 2)))
+
+            if next_color != white and next_color != blue and next_color != red:
+                frontier.append(next_point)
+
+    global moving_po_set
+    global id_num
+    id_num += 1
+    rd_color = (purple, pink, yellow, black, coral, orange)
+    rand = rd_color[rd.randint(0, 5)]
+    moving_po_set.append(Moving_Polygon(points, dir_set[rd.randint(0, 7)], rand, id_num))
+
+
+def no_input_polygon():
+    global moving_po_set
+    moving_po_set.clear()
+    global id_num
+    id_num = 0
+    for x in range(0, int(1280/scale)):
+        for y in range(0, int(720/scale)):
+            point = (x, y)
+            pcolor = pg.Surface.get_at(screen, (x * scale + int(scale / 2), y * scale + int(scale / 2)))
+            for polygon in moving_po_set:
+                if point in polygon.points:
+                    continue
+            if pcolor != white and pcolor != blue and pcolor != red and pcolor != gray:
+                add_moving_polygon(x, y, pcolor)
 
 
 def flip_y(point):
@@ -647,7 +761,9 @@ def add_and_draw_shape(display, points):
     pg.draw.polygon(display, white, scaled)
 
     cell_to_draw = list(dict.fromkeys(cell_to_draw))
-    moving_po_set.append(Moving_Polygon(cell_to_draw.copy(), dir_set[rd.randint(0, 7)], rand))
+    global id_num
+    moving_po_set.append(Moving_Polygon(cell_to_draw.copy(), dir_set[rd.randint(0, 7)], rand, id_num))
+    id_num += 1
 
     for cell in cell_to_draw:
         draw_cell(display, cell, rand)
@@ -657,6 +773,7 @@ def add_and_draw_shape(display, points):
 
 
 def reset(display):
+
     display.fill(white)
 
     for polygon in polygon_set:
@@ -702,6 +819,11 @@ def load_pick_up(string):
 
 
 def open_file():
+    global moving_po_set
+    moving_po_set.clear()
+    global id_num
+    id_num = 0
+
     file_path = filedialog.askopenfilename()
     if not file_path:
         return
@@ -875,11 +997,6 @@ while run:
     pg.display.set_caption("Simulation")
     reset(screen)
 
-    for obj in moving_po_set:
-        print(obj.points, end=" | ")
-        print(obj.color, end=" | ")
-        print(obj.dir)
-
     while run_sim:
         pg.time.delay(10)
         for event in pg.event.get():
@@ -918,7 +1035,10 @@ while run:
                     cost = find_path()
                     run_sim = False
                 elif event.key == pg.K_SPACE:
-                    find_path_moving()
+                    if no_input:
+                        no_input_polygon()
+                    cost = find_path_moving()
+                    run_sim = False
 
         pg.display.update()
 
