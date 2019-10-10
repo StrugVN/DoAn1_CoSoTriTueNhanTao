@@ -906,7 +906,7 @@ def choose_astar():
 
 def choose_breadth_first():
     global search_alg
-    search_alg = choose_breadth_first
+    search_alg = breadth_first
     wc.destroy()
 
 
