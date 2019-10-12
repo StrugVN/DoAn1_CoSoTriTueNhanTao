@@ -58,7 +58,7 @@ class Moving_Point:
     def __init__(self, point, goal):
         self.point = point
         self.goal = goal
-        self.path = best_first_search(screen, self.point, self.goal, 1280/scale, 720/scale, True)[1]
+        self.path = greedy_best_first_search(screen, self.point, self.goal, 1280 / scale, 720 / scale, True)[1]
         self.cost = 0
 
     def arrived(self):
@@ -73,9 +73,10 @@ class Moving_Point:
     def move_to_next(self):
         if self.arrived():
             return
-        pcolor = pg.Surface.get_at(screen, (self.path[0][0] * scale + int(scale / 2), self.path[0][1] * scale + int(scale / 2)))
+        pcolor = pg.Surface.get_at(screen,
+                                   (self.path[0][0] * scale + int(scale / 2), self.path[0][1] * scale + int(scale / 2)))
         if len(self.path) == 0 or (pcolor != white and pcolor != red):
-            self.path = best_first_search(screen, self.point, self.goal, 1280 / scale, 720 / scale, True)[1]
+            self.path = greedy_best_first_search(screen, self.point, self.goal, 1280 / scale, 720 / scale, True)[1]
 
         if len(self.path) > 0:
             self.clear_self()
@@ -86,7 +87,6 @@ class Moving_Point:
             self.point = self.path[0]
             self.path.pop(0)
             self.draw_self()
-
 
 
 class Moving_Polygon:
@@ -114,7 +114,8 @@ class Moving_Polygon:
         for point in self.points:
             new_pos.append((point[0] + self.dir[0], point[1] + self.dir[1]))
         for point in new_pos:
-            if point[0] < 0 or point[1] < 0 or point[0] >= int(1280/scale) or point[1] >= int(720/scale) or point == goal:
+            if point[0] < 0 or point[1] < 0 or point[0] >= int(1280 / scale) or point[1] >= int(
+                    720 / scale) or point == goal:
                 self.dir = dir_set[rd.randint(0, 7)]
                 return False
             if point == moving_point.point:
@@ -138,7 +139,7 @@ def is_out_of_bound(point):
     return point[0] > 1280 - 1 or point[1] > 720 - 1
 
 
-def breadth_first(display, start_posi, end_posi, max_x, max_y):
+def breadth_first(display, start_posi, end_posi, max_x, max_y, pick_up_points=None):
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -154,21 +155,38 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
         passed_node.append(curr_node)
         to_draw_p.append(curr_node)
 
-        if curr_node == end:
-            path = []
-            node = curr_node
-            while node is not None:
-                path.append(node.point)
-                node = node.back_node
-            for cell in path:
-                pcolor = pg.Surface.get_at(display,
-                                           (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
-                if pcolor == blue or pcolor == brown or pcolor == tan:
-                    continue
-                draw_cell(display, cell, lightblue)
-            draw_cell(display, start_pos, blue)
-            draw_cell(display, end_pos, red)
-            return curr_node.f, path[::-1]
+        if pick_up_points is None:
+            if curr_node == end:
+                path = []
+                node = curr_node
+                while node is not None:
+                    path.append(node.point)
+                    node = node.back_node
+                for cell in path:
+                    pcolor = pg.Surface.get_at(display,
+                                               (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
+                    if pcolor == blue or pcolor == brown or pcolor == tan:
+                        continue
+                    draw_cell(display, cell, lightblue)
+                draw_cell(display, start_pos, blue)
+                draw_cell(display, end_pos, red)
+                return curr_node.f, path[::-1]
+        else:
+            if curr_node.point in pick_up_points:
+                path = []
+                node = curr_node
+                while node is not None:
+                    path.append(node.point)
+                    node = node.back_node
+                for cell in path:
+                    pcolor = pg.Surface.get_at(display,
+                                               (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
+                    if pcolor == blue or pcolor == brown or pcolor == tan:
+                        continue
+                    draw_cell(display, cell, lightblue)
+                draw_cell(display, start_pos, blue)
+                draw_cell(display, end_pos, red)
+                return curr_node.f, path[::-1], pick_up_points.index(curr_node.point)
 
         next_nodes = []
         for next in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
@@ -197,7 +215,7 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
             p_color = pg.Surface.get_at(display,
                                         (new_node[0] * scale + int(scale / 2), new_node[1] * scale + int(scale / 2)))
             if p_color == purple or p_color == black or p_color == yellow or p_color == pink or p_color == coral or p_color == orange:
-                    continue
+                continue
 
             next_node = Node(new_node, curr_node)
             if cross:
@@ -239,7 +257,7 @@ def breadth_first(display, start_posi, end_posi, max_x, max_y):
     return -1, ()
 
 
-def best_first_search(display, start_posi, end_posi, max_x, max_y, dont_draw=False):
+def greedy_best_first_search(display, start_posi, end_posi, max_x, max_y, dont_draw=False):
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -406,11 +424,11 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y, dont_draw=False
             # Xét không đi xéo qua hình
             if cross:
                 x_color = pg.Surface.get_at(display, (
-                new_node[0] * scale + int(scale / 2), curr_node.point[1] * scale + int(scale / 2)))
+                    new_node[0] * scale + int(scale / 2), curr_node.point[1] * scale + int(scale / 2)))
                 if x_color == purple or x_color == black or x_color == yellow or x_color == pink or x_color == coral or x_color == orange:
                     continue
                 y_color = pg.Surface.get_at(display, (
-                curr_node.point[0] * scale + int(scale / 2), new_node[1] * scale + int(scale / 2)))
+                    curr_node.point[0] * scale + int(scale / 2), new_node[1] * scale + int(scale / 2)))
                 if y_color == purple or y_color == black or y_color == yellow or y_color == pink or y_color == coral or y_color == orange:
                     continue
 
@@ -423,7 +441,6 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y, dont_draw=False
             if cross:
                 next_node.g = 0.4
             next_nodes.append(next_node)
-
 
         for node in next_nodes:
             if node in passed_node:
@@ -442,14 +459,16 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y, dont_draw=False
         if not dont_draw:
             for node in to_draw_p:
                 pcolor = pg.Surface.get_at(display,
-                                           (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
+                                           (node.point[0] * scale + int(scale / 2),
+                                            node.point[1] * scale + int(scale / 2)))
                 if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
                     continue
                 draw_cell(display, node.point, green)
 
             for node in to_draw_f:
                 pcolor = pg.Surface.get_at(display,
-                                           (node.point[0] * scale + int(scale / 2), node.point[1] * scale + int(scale / 2)))
+                                           (node.point[0] * scale + int(scale / 2),
+                                            node.point[1] * scale + int(scale / 2)))
                 if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
                     continue
                 draw_cell(display, node.point, steelblue)
@@ -462,7 +481,7 @@ def find_path_astar(display, start_posi, end_posi, max_x, max_y, dont_draw=False
     return -1, ()
 
 
-def uniform_cost(display, start_posi, end_posi, max_x, max_y):
+def uniform_cost(display, start_posi, end_posi, max_x, max_y, pick_up_points=None):
     start = Node(start_posi, None)
     end = Node(end_posi, None)
 
@@ -484,21 +503,38 @@ def uniform_cost(display, start_posi, end_posi, max_x, max_y):
         passed_node.append(curr_node)
         to_draw_p.append(curr_node)
 
-        if curr_node == end:
-            path = []
-            node = curr_node
-            while node is not None:
-                path.append(node.point)
-                node = node.back_node
-            for cell in path:
-                pcolor = pg.Surface.get_at(display,
-                                           (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
-                if pcolor == blue or pcolor == brown or pcolor == tan:
-                    continue
-                draw_cell(display, cell, lightblue)
-            draw_cell(display, start_pos, blue)
-            draw_cell(display, end_pos, red)
-            return curr_node.f, path[::-1]
+        if pick_up_points is None:
+            if curr_node == end:
+                path = []
+                node = curr_node
+                while node is not None:
+                    path.append(node.point)
+                    node = node.back_node
+                for cell in path:
+                    pcolor = pg.Surface.get_at(display,
+                                               (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
+                    if pcolor == blue or pcolor == brown or pcolor == tan:
+                        continue
+                    draw_cell(display, cell, lightblue)
+                draw_cell(display, start_pos, blue)
+                draw_cell(display, end_pos, red)
+                return curr_node.f, path[::-1]
+        else:
+            if curr_node.point in pick_up_points:
+                path = []
+                node = curr_node
+                while node is not None:
+                    path.append(node.point)
+                    node = node.back_node
+                for cell in path:
+                    pcolor = pg.Surface.get_at(display,
+                                               (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
+                    if pcolor == blue or pcolor == brown or pcolor == tan:
+                        continue
+                    draw_cell(display, cell, lightblue)
+                draw_cell(display, start_pos, blue)
+                draw_cell(display, end_pos, red)
+                return curr_node.f, path[::-1], pick_up_points.index(curr_node.point)
 
         next_nodes = []
         node_cross = []
@@ -572,7 +608,57 @@ def uniform_cost(display, start_posi, end_posi, max_x, max_y):
     return -1, ()
 
 
-def find_path():
+def find_path_blind():
+    if len(pickup_points) > 0:
+        cloned_pickup = pickup_points.copy()
+        final_path = []
+        final_cost = 0
+
+        global sub_path
+        sub_path = [start_pos]
+
+        curr_point = start_pos
+
+        while len(cloned_pickup) > 0:
+            clear_route(screen, int(1280 / scale), int(720 / scale))
+
+            find_sub_path = search_alg(screen, curr_point, end_pos, 1280 / scale, 720 / scale, cloned_pickup)
+
+            if find_sub_path[0] == -1:
+                return -1
+
+            curr_point = cloned_pickup[find_sub_path[2]]
+            cloned_pickup.pop(find_sub_path[2])
+            sub_path.append(curr_point)
+
+            final_path.append(find_sub_path[1])
+            final_cost += find_sub_path[0]
+
+            draw_cell(screen, curr_point, brown)
+
+        clear_route(screen, int(1280 / scale), int(720 / scale))
+
+        find_sub_path = search_alg(screen, sub_path[len(sub_path) - 1], end_pos, 1280 / scale, 720 / scale)
+        if find_sub_path[0] == -1:
+            return -1
+        final_path.append(find_sub_path[1])
+        final_cost += find_sub_path[0]
+        sub_path.append(end_pos)
+        clear_route(screen, int(1280 / scale), int(720 / scale))
+
+        for _path in final_path:
+            for cell in _path:
+                pcolor = pg.Surface.get_at(screen, (cell[0] * scale + int(scale / 2), cell[1] * scale + int(scale / 2)))
+                if pcolor == blue or pcolor == brown or pcolor == tan or pcolor == red:
+                    continue
+                draw_cell(screen, cell, lightblue)
+
+        return final_cost
+    else:
+        return search_alg(screen, start_pos, end_pos, int(1280 / scale), int(720 / scale))[0]
+
+
+def find_path_heuristic():
     if len(pickup_points) > 0:
         cloned_pickup = pickup_points.copy()
         final_path = []
@@ -585,10 +671,10 @@ def find_path():
             clear_route(screen, int(1280 / scale), int(720 / scale))
 
             for point in cloned_pickup:
-                sub_cost_path = search_alg(screen, curr_point, point, 1280 / scale, 720 / scale)
-                if sub_cost_path[0] == -1:
+                find_sub_path = search_alg(screen, curr_point, point, 1280 / scale, 720 / scale)
+                if find_sub_path[0] == -1:
                     return -1
-                route_costpath.append(sub_cost_path)
+                route_costpath.append(find_sub_path)
 
             min_ind = 0
             for i in range(0, len(route_costpath)):
@@ -606,11 +692,11 @@ def find_path():
 
         clear_route(screen, int(1280 / scale), int(720 / scale))
 
-        sub_pathcost = search_alg(screen, sub_path[len(sub_path) - 1], end_pos, 1280 / scale, 720 / scale)
-        if sub_pathcost[0] == -1:
+        find_sub_path = search_alg(screen, sub_path[len(sub_path) - 1], end_pos, 1280 / scale, 720 / scale)
+        if find_sub_path[0] == -1:
             return -1
-        final_path.append(sub_pathcost[1])
-        final_cost += sub_pathcost[0]
+        final_path.append(find_sub_path[1])
+        final_cost += find_sub_path[0]
         sub_path.append(end_pos)
         clear_route(screen, int(1280 / scale), int(720 / scale))
 
@@ -626,9 +712,14 @@ def find_path():
         return search_alg(screen, start_pos, end_pos, int(1280 / scale), int(720 / scale))[0]
 
 
+def find_path():
+    if search_alg == find_path_astar or search_alg == greedy_best_first_search:
+        return find_path_heuristic()
+    else:
+        return find_path_blind()
+
+
 def find_path_moving():
-    print("Sim moving obj")
-    print(len(moving_po_set))
     curr = Moving_Point(start_pos, end_pos)
     while not curr.arrived():
         pg.time.wait(200)
@@ -640,9 +731,6 @@ def find_path_moving():
 
 
 def add_moving_polygon(x, y, pcolor):
-    print("Adding polygon, start: ", end="")
-    print(x, end=",")
-    print(y)
     frontier = [(x, y)]
     points = []
 
@@ -656,13 +744,15 @@ def add_moving_polygon(x, y, pcolor):
 
         for next in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
             next_point = curr[0] + next[0], curr[1] + next[1]
-            if next_point[0] < 0 or next_point[1] < 0 or next_point[0] >= int(1280/scale) or next_point[1] >= int(720/scale):
+            if next_point[0] < 0 or next_point[1] < 0 or next_point[0] >= int(1280 / scale) or next_point[1] >= int(
+                    720 / scale):
                 continue
             if next_point in points:
                 continue
             if next_point in frontier:
                 continue
-            next_color = pg.Surface.get_at(screen, (next_point[0] * scale + int(scale / 2), next_point[1] * scale + int(scale / 2)))
+            next_color = pg.Surface.get_at(screen, (
+            next_point[0] * scale + int(scale / 2), next_point[1] * scale + int(scale / 2)))
 
             if next_color != white and next_color != blue and next_color != red:
                 frontier.append(next_point)
@@ -680,8 +770,8 @@ def no_input_polygon():
     moving_po_set.clear()
     global id_num
     id_num = 0
-    for x in range(0, int(1280/scale)):
-        for y in range(0, int(720/scale)):
+    for x in range(0, int(1280 / scale)):
+        for y in range(0, int(720 / scale)):
             point = (x, y)
             pcolor = pg.Surface.get_at(screen, (x * scale + int(scale / 2), y * scale + int(scale / 2)))
             for polygon in moving_po_set:
@@ -702,8 +792,10 @@ def get_scale(point):
 def get_cell(x, y):
     x *= scale
     y *= scale
-    return (x + int(scale / 20) + 1, y + int(scale / 20) + 1), (x - int(scale / 20) - 1 + scale, y + int(scale / 20) + 1), (
-        x - int(scale / 20) - 1 + scale, y - int(scale / 20) - 1 + scale), (x + int(scale / 20) + 1, y - int(scale / 20) - 1 + scale)
+    return (x + int(scale / 20) + 1, y + int(scale / 20) + 1), (
+    x - int(scale / 20) - 1 + scale, y + int(scale / 20) + 1), (
+               x - int(scale / 20) - 1 + scale, y - int(scale / 20) - 1 + scale), (
+           x + int(scale / 20) + 1, y - int(scale / 20) - 1 + scale)
 
 
 def draw_grid(display):
@@ -773,7 +865,6 @@ def add_and_draw_shape(display, points):
 
 
 def reset(display):
-
     display.fill(white)
 
     for polygon in polygon_set:
@@ -841,7 +932,7 @@ def open_file():
     i = 4
 
     while i < len(points):
-        pickup_points.append(flip_y((points[i], points[i+1])))
+        pickup_points.append(flip_y((points[i], points[i + 1])))
         i += 2
 
     # Bỏ dòng số lượng vì ko cần xài
@@ -918,8 +1009,9 @@ def choose_uniform_cost():
 
 def choose_best_first():
     global search_alg
-    search_alg = best_first_search
+    search_alg = greedy_best_first_search
     wc.destroy()
+
 
 # Program start here
 pg.init()
@@ -976,13 +1068,13 @@ while run:
 
     wc = tk.Tk()
     wc.title("Choose execute algorithm: ")
-    bc1 = tk.Button(wc, text="A Star Search", width=16, command=choose_astar)
+    bc1 = tk.Button(wc, text="A Star Search", width=20, command=choose_astar)
     bc1.config(font=("Time new Roman", 14))
-    bc2 = tk.Button(wc, text="Breadth First Search", width=16, command=choose_breadth_first)
+    bc2 = tk.Button(wc, text="Breadth First Search", width=20, command=choose_breadth_first)
     bc2.config(font=("Time new Roman", 14))
-    bc3 = tk.Button(wc, text="Uniform-cost Search", width=16, command=choose_uniform_cost)
+    bc3 = tk.Button(wc, text="Uniform-cost Search", width=20, command=choose_uniform_cost)
     bc3.config(font=("Time new Roman", 14))
-    bc4 = tk.Button(wc, text="Best First Search", width=16, command=choose_best_first)
+    bc4 = tk.Button(wc, text="Greedy Best First Search", width=20, command=choose_best_first)
     bc4.config(font=("Time new Roman", 14))
     bc1.grid(row=0, column=0)
     bc2.grid(row=0, column=1)
@@ -1004,7 +1096,7 @@ while run:
                 run_sim = False
             elif pg.mouse.get_pressed()[0]:
                 color = pg.Surface.get_at(screen, pg.mouse.get_pos())
-                if color == white and no_input:
+                if (color == white or color == black) and no_input:
                     if scale != 1:
                         draw_cell(screen, (int(pg.mouse.get_pos()[0] / scale), int(pg.mouse.get_pos()[1] / scale)),
                                   black)
@@ -1020,7 +1112,7 @@ while run:
                                   (int(pg.mouse.get_pos()[0] / scale) + 1, int(pg.mouse.get_pos()[1] / scale) - 1),
                                   black)
                         draw_cell(screen,
-                                  (int(pg.mouse.get_pos()[0] / scale) + 1, int(pg.mouse.get_pos()[1] / scale) - 1),
+                                  (int(pg.mouse.get_pos()[0] / scale) - 1, int(pg.mouse.get_pos()[1] / scale) - 1),
                                   black)
                         draw_cell(screen,
                                   (int(pg.mouse.get_pos()[0] / scale) + 1, int(pg.mouse.get_pos()[1] / scale) + 1),
@@ -1053,8 +1145,13 @@ while run:
             path = [str(i) for i in sub_path]
             s_cost = "{0:.3f}".format(cost)
             text = "Path: %s\nTotal cost: %s" % (path, s_cost)
-            if len(sub_path) > 0:
-                path = [str(i) for i in sub_path]
+
+            oxy_path = []
+            for i in sub_path:
+                oxy_path.append(flip_y(i))
+
+            if len(oxy_path) > 0:
+                path = [str(i) for i in oxy_path]
                 s_cost = "{0:.3f}".format(cost)
                 text = "Path: %s\nTotal cost: %s" % (path, s_cost)
             else:
