@@ -639,6 +639,14 @@ def uniform_cost(display, start_posi, end_posi, max_x, max_y, pick_up_points=Non
 
 def find_path_blind():
     if len(pickup_points) > 0:
+        if start_pos == end_pos:
+            flag = True
+            for point in pickup_points:
+                if point != start_pos:
+                    flag = False
+                    break
+            if flag:
+                return -2
         cloned_pickup = pickup_points.copy()
         final_path = []
         final_cost = 0
@@ -683,12 +691,22 @@ def find_path_blind():
                 draw_cell(screen, cell, lightblue)
 
         return final_cost
+    elif start_pos == end_pos:
+        return -2
     else:
         return search_alg(screen, start_pos, end_pos, int(1280 / scale), int(720 / scale))[0]
 
 
 def find_path_heuristic():
     if len(pickup_points) > 0:
+        if start_pos == end_pos:
+            flag = True
+            for point in pickup_points:
+                if point != start_pos:
+                    flag = False
+                    break
+            if flag:
+                return -2
         cloned_pickup = pickup_points.copy()
         final_path = []
         final_cost = 0
@@ -737,6 +755,8 @@ def find_path_heuristic():
                 draw_cell(screen, cell, lightblue)
 
         return final_cost
+    elif start_pos == end_pos:
+        return -2
     else:
         return search_alg(screen, start_pos, end_pos, int(1280 / scale), int(720 / scale))[0]
 
@@ -749,6 +769,8 @@ def find_path():
 
 
 def find_path_moving():
+    if start_pos == end_pos:
+        return -2
     curr = Moving_Point(start_pos, end_pos)
     while not curr.arrived():
         pg.time.wait(200)
@@ -1210,6 +1232,8 @@ while run:
         text = ""
         if cost == -1:
             text = "Cannot find path to target!"
+        elif cost == -2:
+            text = "No points to move to!\nCost: 0"
         else:
             path = [str(i) for i in sub_path]
             s_cost = "{0:.3f}".format(cost)
