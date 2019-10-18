@@ -1083,9 +1083,9 @@ def choose_best_first():
 # Program start here
 pg.init()
 pg.font.init()
-font_bigger = pg.font.SysFont('Helvetica Neue', 40, bold=True)
-font_big = pg.font.SysFont('Helvetica Neue', 30)
-font = pg.font.SysFont('Helvetica Neue', 20)
+font_bigger = pg.font.SysFont('Helvetica Neue', 50, bold=True)
+font_big = pg.font.SysFont('Helvetica Neue', 45)
+font = pg.font.SysFont('Helvetica Neue', 33)
 
 guide = font_big.render('How to use:', False, black)
 guide1 = font.render('- Press [Enter] to start normal search', False, black)
